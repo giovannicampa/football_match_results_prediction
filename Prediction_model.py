@@ -10,13 +10,13 @@ import numpy as np
 import pandas as pd
 
 # Loading the prepared data
-
-if os.path.exists('data_all_seasons.pickle'):
-    data = pickle.load(open('data_all_seasons.pickle', 'rb'))
+if os.path.exists("data.csv"):
+    data = pd.read_csv("data.csv")
 
 else:
     data = prepare_data()
-    
+
+
 # -------- First Part: Training and evaluating a RF regressor
     
 # - 1.1: Performing a grid search for the best parameters of the random forest regressor
