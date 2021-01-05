@@ -17,7 +17,8 @@ from sklearn.model_selection import RandomizedSearchCV, train_test_split
 from data_preparation import prepare_data
 
 
-# Loading the prepared data
+# ---------------------------------------------------------------------------------------------------------------
+# - Loading the data
 if os.path.exists("data.csv"):
     data = pd.read_csv("data.csv")
 
@@ -28,6 +29,8 @@ X  = data.drop(['score_home','score_away', 'winners'], axis = 1, inplace = False
 y = data.loc[:, ['score_home','score_away', 'winners']] 
 
 
+# - Preprocessing
+
 # Scaling features
 scaler = MinMaxScaler(feature_range=(0, 1))
 
@@ -36,7 +39,8 @@ col_names_X = X.columns.tolist()
 X = pd.DataFrame(scaler.fit_transform(X))
 X.columns = col_names_X
 
-# Splitting in traning and test set
+
+# - Splitting in traning and test set
 X_train, X_test, y_train, y_test = train_test_split(X,y)
 
 
@@ -44,15 +48,17 @@ X_train, X_test, y_train, y_test = train_test_split(X,y)
 # ---------------------------------------------------------------------------------------------------------------
 # - Callbacks
 
-# Adding path to particle class
+
+# Tensorboard callback
+
 current_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(1, current_path+'/envs')
-
-
 now = datetime.datetime.now()
 dt_string = now.strftime("%d/%m/%Y %H:%M:%S").strip(" ").replace("/", "_").replace(":", "_").replace(" ", "_")
-
 tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=current_path + "/tensorboard/"+ dt_string)
+
+
+# Learning rate scheduler
 
 initial_learning_rate = 0.01
 def lr_step_decay(epoch, lr):
@@ -60,10 +66,10 @@ def lr_step_decay(epoch, lr):
     epochs_drop = 10.0
     return initial_learning_rate * math.pow(drop_rate, math.floor(epoch/epochs_drop))
 
-
 lr_callback = tf.keras.callbacks.LearningRateScheduler(lr_step_decay)
 
-# ---------------------------------------------------------------------------------------------------------------        
+
+# ---------------------------------------------------------------------------------------------------------------
 # - Building the TF Model
 
 model = keras.Sequential([
@@ -78,7 +84,7 @@ model = keras.Sequential([
 
 optimizer = tf.keras.optimizers.RMSprop(0.001)
 
-model.compile(loss='mean_squared_error', optimizer=optimizer, metrics=['mean_absolute_error', 'mean_squared_error'])
+model.compile(loss='mean_squared_error', optimizer=optimizer, metrics=['mean_squared_error'])
 
 history = model.fit(X_train,
                     y_train.loc[:,['score_home', 'score_away']],
@@ -87,10 +93,13 @@ history = model.fit(X_train,
                     validation_split = 0.2,
                     callbacks=[tensorboard_callback, lr_callback])
 
-hist = pd.DataFrame(history.history)
-hist['epoch'] = history.epoch
 
+# ---------------------------------------------------------------------------------------------------------------
+# - Evaluation
 
+# Evaluating the regression model (predicts nr of goals for each team) with regard to the winning team
+# To do this, from the predicted scores the winning team must be calculated. This is then compared with
+# the actual result of the match
 
 y_predict = pd.DataFrame(model.predict(X_test))
 y_predict.columns = ['score_home', 'score_away']
@@ -102,7 +111,7 @@ predicted_winners[np.round(y_predict.score_home) == np.round(y_predict.score_awa
 real_winners = y_test.loc[:, 'winners'].values.tolist()
 
 
-# - Evaluating the regressor by looking comparing the predicted and the real winner
+# - Evaluating the regressor by comparing the predicted and the real winner
 nr_games = predicted_winners.shape[0]
 
 print('Prediction accuracy: ',sum(predicted_winners.reshape(1,-1)[0] == real_winners)/nr_games*100)
