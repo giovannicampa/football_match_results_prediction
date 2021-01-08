@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import os
 import sys
 
@@ -8,17 +10,19 @@ import datetime
 import matplotlib.pyplot as plt
 
 import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras import layers
+from tensorflow.keras.layers import Dense, Input
 from tensorflow.keras.callbacks import TensorBoard
 from tensorflow.python.eager import context
 from tensorflow.keras.callbacks import LearningRateScheduler
+from tensorflow.keras.models import Model
 
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import RandomizedSearchCV, train_test_split
 
 from data_preparation import prepare_data
 
+
+tf.config.experimental.set_visible_devices([], 'GPU')
 
 # ---------------------------------------------------------------------------------------------------------------
 # - Loading the data
@@ -61,47 +65,8 @@ dt_string = now.strftime("%d/%m/%Y %H:%M:%S").strip(" ").replace("/", "_").repla
 log_directory = current_path + "/tensorboard/"+ dt_string
 
 
-tb_callback = TensorBoard(log_directory = log_directory)
+tb_callback = TensorBoard(log_dir = log_directory)
 
-
-
-class TrainValTensorBoard(TensorBoard):
-    def __init__(self, log_dir=log_directory, **kwargs):
-        self.val_log_dir = os.path.join(log_dir, 'validation')
-        training_log_dir = os.path.join(log_dir, 'training')
-        super(TrainValTensorBoard, self).__init__(training_log_dir, **kwargs)
-
-    def set_model(self, model):
-        if context.executing_eagerly():
-            self.val_writer = tf.contrib.summary.create_file_writer(self.val_log_dir)
-        else:
-            self.val_writer = tf.summary.FileWriter(self.val_log_dir)
-        super(TrainValTensorBoard, self).set_model(model)
-
-    def _write_custom_summaries(self, step, logs=None):
-        logs = logs or {}
-        val_logs = {k.replace('val_', ''): v for k, v in logs.items() if 'val_' in k}
-        if context.executing_eagerly():
-            with self.val_writer.as_default(), tf.contrib.summary.always_record_summaries():
-                for name, value in val_logs.items():
-                    tf.contrib.summary.scalar(name, value.item(), step=step)
-        else:
-            for name, value in val_logs.items():
-                summary = tf.Summary()
-                summary_value = summary.value.add()
-                summary_value.simple_value = value.item()
-                summary_value.tag = name
-                self.val_writer.add_summary(summary, step)
-        self.val_writer.flush()
-
-        logs = {k: v for k, v in logs.items() if not 'val_' in k}
-        super(TrainValTensorBoard, self)._write_custom_summaries(step, logs)
-
-    def on_train_end(self, logs=None):
-        super(TrainValTensorBoard, self).on_train_end(logs)
-        self.val_writer.close()
-
-tb_custom_callback = TrainValTensorBoard(log_dir=log_directory)
 
 
 # Learning rate scheduler
@@ -118,13 +83,28 @@ lr_callback = LearningRateScheduler(lr_step_decay)
 # ---------------------------------------------------------------------------------------------------------------
 # - Building the TF Model
 
-model = keras.Sequential([
-    layers.Dense(8, activation=tf.nn.relu, input_shape=[X.shape[1]]),
-    layers.Dense(8, activation=tf.nn.relu),
-    layers.Dense(8, activation=tf.nn.relu),
-    layers.Dense(8, activation=tf.nn.relu),
-    layers.Dense(2)
-])
+# model = tf.keras.layer.Sequential([
+#     tf.keras.layers.Dense(8, activation="relu", input_shape=[X.shape[1]]),
+#     tf.keras.layers.Dense(8, activation="relu"),
+#     tf.keras.layers.Dense(8, activation="relu"),
+#     tf.keras.layers.Dense(8, activation="relu"),
+#     tf.keras.layers.Dense(2)
+# ])
+
+input_layer = Input(shape=[X.shape[1]])
+x = Dense(units = 8)(input_layer)
+x = Dense(units = 8)(x)
+x = Dense(units = 8)(x)
+
+x_1 = Dense(units = 4)(x)
+out_1 = Dense(units = 1)(x_1)
+
+x_2 = Dense(units = 4)(x)
+out_2 = Dense(units = 1)(x_2)
+
+model = Model(inputs = input_layer, outputs = [out_1, out_2])
+
+
 
 optimizer = tf.keras.optimizers.RMSprop(0.001)
 
@@ -139,8 +119,8 @@ history = model.fit(
         epochs=40,
         batch_size=8,
         validation_split = 0.3,
-        verbose=0,
-        callbacks=[tb_callback, tb_custom_callback, lr_callback])
+        verbose=1,
+        callbacks=[tb_callback, lr_callback])
 
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -150,7 +130,10 @@ history = model.fit(
 # To do this, from the predicted scores the winning team must be calculated. This is then compared with
 # the actual result of the match
 
-y_predict = pd.DataFrame(model.predict(X_test))
+y_predict = model.predict(X_test)
+
+y_predict_home = y_predict[0]
+y_predict_away = y_predict[1]
 y_predict.columns = ['score_home', 'score_away']
 predicted_winners = np.empty([y_predict.shape[0],1], dtype = 'str')
 predicted_winners[y_predict.score_home > y_predict.score_away] = 'H'
