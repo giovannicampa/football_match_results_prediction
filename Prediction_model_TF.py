@@ -2,6 +2,7 @@
 
 import os
 import sys
+import shutil
 
 from itertools import product
 import datetime
@@ -10,19 +11,14 @@ import numpy as np
 import pandas as pd
 import math
 
-import matplotlib.pyplot as plt
-
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, Input
-from tensorflow.keras.callbacks import TensorBoard
-from tensorflow.python.eager import context
-from tensorflow.keras.callbacks import LearningRateScheduler
+from tensorflow.keras.callbacks import TensorBoard, EarlyStopping, LearningRateScheduler
 from tensorflow.keras.models import Model
 from tensorflow.keras import backend as K
 
 from sklearn.preprocessing import MinMaxScaler
-from sklearn.model_selection import GridSearchCV, train_test_split
-from tensorflow.keras.wrappers.scikit_learn import KerasRegressor
+from sklearn.model_selection import train_test_split
 
 from data_preparation import prepare_data
 
@@ -58,16 +54,17 @@ X.columns = col_names_X
 X_train, X_test, y_train, y_test = train_test_split(X,y)
 
 
+def integer_accuracy(y_true, y_predict):
+
+    accuracy = y_true - tf.keras.backend.round(y_predict)
+
+    return accuracy
 
 # ---------------------------------------------------------------------------------------------------------------
 # - Callbacks
 
-# Tensorboard callback (string name only)
-
-current_path = os.path.dirname(os.path.realpath(__file__))
-now = datetime.datetime.now()
-dt_string = now.strftime("%d/%m/%Y %H:%M:%S").strip(" ").replace("/", "_").replace(":", "_").replace(" ", "_")
-
+# Early stopping callback
+es_callback = EarlyStopping(monitor='val_loss', mode='min', patience=20, verbose=0)
 
 # Learning rate scheduler
 
@@ -85,8 +82,10 @@ def generate_lr_scheduler(initial_learning_rate = 0.01):
 # - Building the TF Model
 class ModelBuilder():
 
-    def __init__(self):
+    def __init__(self, keep_n_best_losses = 2):
         self.best_loss = 100
+        self.best_n_losses = np.linspace(1000, 999, keep_n_best_losses)
+        self.best_n_losses_dirs = ["" for i in range(keep_n_best_losses)]
 
     def build(self, neurons = 8, depth = 3, activation = "relu", optimizer = "RMSprop", learning_rate = 0.01, batch_size = 8):
         """ GridSearch compatible model definition
@@ -99,13 +98,16 @@ class ModelBuilder():
         self.hp_string = "_nr_" + str(neurons) + \
                          "_depth_" + str(depth) + \
                          "_act_" + str(activation) + \
-                         "_opt_" + str(optimizer) + \
-                         "_batch_"+str(batch_size)
+                         "_batch_"+str(batch_size) + \
+                         "_lr_" + str(learning_rate)
 
-        log_directory = current_path + "/tensorboard/"+ self.hp_string
+        current_path = os.path.dirname(os.path.realpath(__file__))
+        now = datetime.datetime.now()
+        dt_string = now.strftime("%d/%m/%Y %H:%M:%S").strip(" ").replace("/", "_").replace(":", "_").replace(" ", "_")
+        self.log_directory = current_path + "/tensorboard/"+ dt_string + self.hp_string
 
 
-        tb_callback = TensorBoard(log_dir = log_directory, profile_batch=0)
+        tb_callback = TensorBoard(log_dir = self.log_directory, profile_batch=0)
 
 
         # Learning rate scheduler
@@ -128,17 +130,17 @@ class ModelBuilder():
 
         self.model.compile(
                 loss = "mse",
-                metrics = "mean_squared_error",
+                metrics = integer_accuracy,
                 optimizer=optimizer)
 
         history = self.model.fit(
                 X_train,
                 y_train.loc[:,['score_home', 'score_away']],
-                epochs=50,
+                epochs=150,
                 batch_size=batch_size,
                 validation_split = 0.3,
                 verbose=0,
-                callbacks=[tb_callback, lr_callback])
+                callbacks=[tb_callback, lr_callback, es_callback])
 
         self.current_loss = np.min(history.history["loss"])
 
@@ -171,6 +173,29 @@ class ModelBuilder():
             print(f'Best loss ({self.best_loss}) is for {self.hp_string}. prediction accuracy: {sum(predicted_result.reshape(1,-1)[0] == real_result)/nr_games*100}')
 
 
+    def clean_tensorboard(self):
+        """ Automatically removes uninteresting TB logs
+        """
+
+        # If the current model is better than an existing one,
+        # replace it log
+        id_worst_loss = np.argmax(self.best_n_losses)
+
+        if self.current_loss < np.max(self.best_n_losses):
+            
+            if self.best_n_losses_dirs[id_worst_loss] != "":
+                shutil.rmtree(self.best_n_losses_dirs[id_worst_loss])       # Remove the tb log of the worst model
+
+            self.best_n_losses[id_worst_loss] = self.current_loss
+            self.best_n_losses_dirs[id_worst_loss] = self.log_directory     # Replace the directory string of the worst model
+        
+        # If the current model is not better than an existing one,
+        # delete the current model's log
+        elif self.best_n_losses_dirs[id_worst_loss] != "":
+
+            shutil.rmtree(self.log_directory)
+
+
 
 param_grid = {"depth":[2,4,8],
                 "activation": ["relu", "tanh"],
@@ -182,7 +207,7 @@ param_grid = {"depth":[2,4,8],
 combinations_of_params = [dict(zip(param_grid, v)) for v in product(*param_grid.values())]
 
 
-model_builder = ModelBuilder()
+model_builder = ModelBuilder(keep_n_best_losses=3)
 
 for parameter in combinations_of_params:
 
@@ -193,6 +218,7 @@ for parameter in combinations_of_params:
                         batch_size=parameter["batch_size"])
     
     model_builder.evaluate_model()
+    model_builder.clean_tensorboard()
 
 
 
