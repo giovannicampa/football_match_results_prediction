@@ -11,7 +11,7 @@ It then calculates features such as ranking position of the two teams at the mom
 It is called by Prediction_mdel.py and only executed if the prepared data has not been already pickled
   
  
-- **Prediction_model.py**
+- **prediction_model.py**
 
 Predicts the numeric value of goals scored by the two teams. It is divided in two:
 
@@ -21,12 +21,26 @@ Predicts the numeric value of goals scored by the two teams. It is divided in tw
 2 - Here the most important features indicated by the random forest regressor are found and this information is then used to reduce the feature set.
 The best parameters for this algorithm are again found with a grid search. The final model, with the best parameters and the most important features is then trained and evaluated on the final result as winner home team, away team or same score.
     
-- **Prediction_model_TF.py**
+- **prediction_model_TF.py**
 
 A multi-output neural network is used to predict the result of the match by predicting the score of each team.
 
+The network is build with tensorflow's the Keras API. To find the best hyperparameters, a grid search has been used. The parameters looked for are network shape (**depth** and **layer size**), **activation function**, **batch size** and **learning rate**.
+
+As the score prediction is a regression problem and does not consider the discrete nature of the match result, a custom accuracy score has been defined (here **integer_accuracy**). This metric compares the rounded predicted value with the real one (integer).
+
+Besides the tensorboard callback, also a **learning rate scheduler** and an **early stopping** callback have been used.
+
+<figure>
+  <img src="https://github.com/giovannicampa/football_match_results_prediction/blob/master/pictures/tb_logs" width="500">
+  <figcaption>Tensorboard log for loss and custom accuracy score</figcaption>
+</figure>
 
 ## Results
-Both models can predict the outcome (winner home team, away team or same score) with a higher accuracy than a random guess (33%).
-Random forest regressor with optimal parameters has an accuracy on the result of about 50% (17 percentage points improvement on random guesses)
-MLP regressor with optimal parameters has an accuracy on the result of about 55% (23 percentage points improvement on random guesses)
+The results of the models have to be evaluated by considering the fact that a random guess has an accuracy of 33% (home team wins, away team wins, draw).
+
+Both the classical machine learning and the deep learning model achieve better accuracies than the random guess.
+
+**Random forest**  with optimal parameters has an accuracy of 50%
+**MLP** (sklearn) with optimal parameters has an accuracy of 55%
+**TF model** with optimal parameters has an accuracy of 57%
