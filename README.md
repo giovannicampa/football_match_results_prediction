@@ -9,8 +9,14 @@ The contained files are:
 
 Reads the data from the csv files containing the information about every single football match of various the seasons.
 It then calculates features such as ranking position of the two teams at the moment of the match, average values of the scores, yellow cards and others
-It is called by Prediction_mdel.py and only executed if the prepared data has not been already pickled
 
+
+It is called by **prediction_model.py** and **prediction_model_TF.py** and only executed if the prepared data has not been already pickled.
+
+<figure>
+  <img src="https://github.com/giovannicampa/football_match_results_prediction/blob/master/pictures/scores.png" width="400">
+  <figcaption>One of the calculated features is the instantaneous ranking of the team</figcaption>
+</figure>
  
 ### prediction_model.py
 
@@ -27,13 +33,13 @@ The best parameters for this algorithm are again found with a grid search. The f
 
 A multi-output neural network build with tensorflow's the Keras API is used to predict the result of the match by predicting the score of each team.
 
-#### Parameter search
+#### Hyperparameter search
 To find the best hyperparameters, a **grid search** has been used. The parameters looked for are network shape (**depth** and **layer size**), **activation function**, **batch size** and **learning rate**.
 
 #### Custom accuracy score
 As the score prediction is a regression problem and does not consider the discrete nature of the match result, a custom accuracy score has been defined (here **integer_accuracy**). This metric compares the rounded predicted value with the real one (integer).
 
-#### Other callbacks
+#### Callbacks
 Besides the tensorboard callback, also a **learning rate scheduler** and an **early stopping** callback have been used.
 
 <figure>
@@ -48,6 +54,10 @@ Both the classical machine learning and the deep learning model achieve better a
 
 **Random forest**  with optimal parameters has an accuracy of 50%
 
-**MLP** (sklearn) with optimal parameters has an accuracy of 55%
+**MLP** (sklearn) with optimal parameters and **best subset of features** has an accuracy of 55%
 
-**TF model** with optimal parameters has an accuracy of 57%
+**TF model** with optimal parameters and **all features** has an accuracy of 59%
+
+
+
+
