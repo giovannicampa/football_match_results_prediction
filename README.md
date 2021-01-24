@@ -70,6 +70,10 @@ Both the classical machine learning and the deep learning model achieve better a
 
 **TF model** with optimal parameters and **all features** has an accuracy of 59%
 
+<figure>
+  <img src="https://github.com/giovannicampa/football_match_results_prediction/blob/master/pictures/confusion_matrix.png" width="400">
+  <figcaption>Confusion matrix for the keras model with the best hyperparameter choice</figcaption>
+</figure>
 
 
 
