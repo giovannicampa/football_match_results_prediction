@@ -69,7 +69,7 @@ def prepare_data():
         # [columns = teams, rows = match days (filled row wise)]
         for day in range(len(match_days)):
             
-            # First table: nr of points by team every day
+            # First table: nr of points by the current team up to the current day
             for team in range(len(teams)):
                 is_home = season.HomeTeam == teams[team]
                 is_away = season.AwayTeam == teams[team]
@@ -195,8 +195,8 @@ def prepare_data():
         
 
             # - Feature: matches_won
-            season_data.matches_won_tot_home[match] = np.mean((season.loc[(idx_date & idx_home_at_home), 'FTR'].values == 'H').tolist() + (season.loc[(idx_date & idx_home_at_away), 'FTR'].values == 'A').tolist())
-            season_data.matches_won_tot_away[match] = np.mean((season.loc[(idx_date & idx_away_at_away), 'FTR'].values == 'A').tolist() + (season.loc[(idx_date & idx_away_at_home), 'FTR'].values == 'H').tolist())
+            season_data.matches_won_tot_home[match] = np.sum((season.loc[(idx_date & idx_home_at_home), 'FTR'].values == 'H').tolist() + (season.loc[(idx_date & idx_home_at_away), 'FTR'].values == 'A').tolist())
+            season_data.matches_won_tot_away[match] = np.sum((season.loc[(idx_date & idx_away_at_away), 'FTR'].values == 'A').tolist() + (season.loc[(idx_date & idx_away_at_home), 'FTR'].values == 'H').tolist())
 
 
             # - Feature: mean shots (all locations)
