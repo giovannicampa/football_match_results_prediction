@@ -32,9 +32,21 @@ The best parameters for this algorithm are again found with a grid search. The f
 ### prediction_model_TF.py
 
 A multi-output neural network build with tensorflow's the Keras API is used to predict the result of the match by predicting the score of each team.
+Using the reduced set of features that were found at the previous point did not yield any imporovement.
 
 #### Hyperparameter search
-To find the best hyperparameters, a **grid search** has been used. The parameters looked for are network shape (**depth** and **layer size**), **activation function**, **batch size** and **learning rate**.
+To find the best hyperparameters, a **grid search** has been used.
+
+The values for the hyperparameters are:
+
+| Hyperparameter     | Search range     | Best value |
+| ------------------ | ---------------- |------------|
+| Neurons per layer  | [8,16,32,64]     | 64         |
+| Depth              | [2,4,8]          | 2          |
+| Activation         | ["relu", "tanh"] | "relu"     |
+| Batch size         | [32, 64]         | 64         |
+| Learning rate      | [0.1, 0.01]      | 0.01       |
+
 
 #### Custom accuracy score
 As the score prediction is a regression problem and does not consider the discrete nature of the match result, a custom accuracy score has been defined (here **integer_accuracy**). This metric compares the rounded predicted value with the real one (integer).
