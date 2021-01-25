@@ -56,7 +56,7 @@ Besides the tensorboard callback, also a **learning rate scheduler** and an **ea
 
 <figure>
   <img src="https://github.com/giovannicampa/football_match_results_prediction/blob/master/pictures/tb_logs" width="500">
-  <figcaption>Tensorboard log for loss and custom accuracy score</figcaption>
+  <figcaption>Tensorboard log for loss and custom accuracy score. The effect of *early stopping* can be seen</figcaption>
 </figure>
 
 ## Results
