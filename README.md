@@ -7,8 +7,8 @@ The contained files are:
 
 ### data_preparation.py
 
-Reads the data from the csv files containing the information about every single football match of various the seasons.
-It then calculates features such as ranking position of the two teams at the moment of the match, average values of the scores, yellow cards and others
+Reads the data from the csv files containing the information about every single football match of various seasons.
+Then it calculates features such as ranking position of the two teams at the moment of the match, average values of scores per match, yellow cards and others
 
 
 It is called by **prediction_model.py** and **prediction_model_TF.py** and only executed if the prepared data has not been already pickled.
@@ -35,7 +35,7 @@ A multi-output neural network build with tensorflow's the Keras API is used to p
 Using the reduced set of features that were found at the previous point did not yield any imporovement.
 
 #### Hyperparameter search
-To find the best hyperparameters, a **grid search** has been used.
+To find the hyperparameters that yield the best accuracy, a **grid search** has been used.
 
 The values for the hyperparameters are:
 
@@ -72,7 +72,7 @@ Both the classical machine learning and the deep learning model achieve better a
 
 <figure>
   <img src="https://github.com/giovannicampa/football_match_results_prediction/blob/master/pictures/confusion_matrix.png" width="400">
-  <figcaption>Confusion matrix for the keras model with the best hyperparameter choice</figcaption>
+  <figcaption>Confusion matrix for the keras model with the hyperparameter that yield the highest accuracy</figcaption>
 </figure>
 
 
